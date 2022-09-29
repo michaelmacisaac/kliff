@@ -718,16 +718,20 @@ class LossNeuralNetworkModel(object):
         loader = self.calculator.get_compute_arguments(batch_size)
 
         epoch = 0  # in case never enters loop
+        epoch_losses=[] #list to store epoch loss values for later plotting
         for epoch in range(self.start_epoch, self.start_epoch + self.num_epochs):
 
             # get the loss without any optimization if continue a training
             if self.start_epoch != 0 and epoch == self.start_epoch:
                 epoch_loss = self._get_loss_epoch(loader)
                 print("Epoch = {:<6d}  loss = {:.10e}".format(epoch, epoch_loss))
+                epoch_losses.append(epoch_loss)
 
             else:
                 epoch_loss = 0
+                structure_total=0 #count of structures in epoch
                 for ib, batch in enumerate(loader):
+                    structure_total+=len(batch) #iteratively adding to structure_total
 
                     def closure():
                         self.optimizer.zero_grad()
@@ -737,7 +741,9 @@ class LossNeuralNetworkModel(object):
 
                     loss = self.optimizer.step(closure)
                     # float() such that do not accumulate history, more memory friendly
-                    epoch_loss += float(loss)
+                    epoch_loss += float(loss)*len(batch)
+                epoch_loss/=structure_total
+                epoch_losses.append(epoch_loss)
 
                 print("Epoch = {:<6d}  loss = {:.10e}".format(epoch, epoch_loss))
                 self.calculator.save_model(epoch)
@@ -747,14 +753,23 @@ class LossNeuralNetworkModel(object):
         epoch_loss = self._get_loss_epoch(loader)
         print("Epoch = {:<6d}  loss = {:.10e}".format(epoch, epoch_loss))
         self.calculator.save_model(epoch, force_save=True)
+        epoch_losses.append(epoch_loss) #appending epoch_loss to list
 
         logger.info(f"Finish minimization using optimization method: {method}.")
+        
+        epoch_losses=np.array(epoch_losses) #convert list to array
+        
+        return epoch_losses #returning array of losses for each epocjh
 
     def _get_loss_epoch(self, loader):
         epoch_loss = 0
+        structure_total=0 #count of data points in epoch
         for ib, batch in enumerate(loader):
+            structure_total+=len(batch) #counting data points
             loss = self._get_loss_batch(batch)
+            loss*=len(batch) #reversing batch normalization done in'_get_loss_batch'
             epoch_loss += float(loss)
+        epoch_loss/=structure_total #normalizing by amount of structures
         return epoch_loss
 
     # TODO this is nice since it is simple and gives user the opportunity to provide a
