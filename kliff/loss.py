@@ -10,6 +10,8 @@ from kliff.calculators.calculator import Calculator, _WrapperCalculator
 from kliff.dataset.weight import Weight
 from kliff.error import report_import_error
 
+
+
 try:
     import torch
 
@@ -716,7 +718,9 @@ class LossNeuralNetworkModel(object):
 
         # data loader
         loader = self.calculator.get_compute_arguments(batch_size)
-
+        
+        scheduler=torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer,factor=0.99, verbose=True)
+        
         epoch = 0  # in case never enters loop
         epoch_losses=[] #list to store epoch loss values for later plotting
         for epoch in range(self.start_epoch, self.start_epoch + self.num_epochs):
@@ -747,7 +751,7 @@ class LossNeuralNetworkModel(object):
 
                 print("Epoch = {:<6d}  loss = {:.10e}".format(epoch, epoch_loss))
                 self.calculator.save_model(epoch)
-
+            scheduler.step(loss)
         # print loss from final parameter and save last epoch
         epoch += 1
         epoch_loss = self._get_loss_epoch(loader)
