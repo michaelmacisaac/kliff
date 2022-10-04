@@ -3,6 +3,7 @@ import sys
 from collections.abc import Iterable
 
 import numpy as np
+import torch
 from loguru import logger
 
 from kliff.utils import create_directory, split_string
@@ -159,7 +160,7 @@ class EnergyForcesRMSE:
             ):
                 print("{:<10d}".format(i), end=" " * 4, file=fout)
                 if self.compute_energy:
-                    print("{:.10e}".format(enorm), end=" " * 10, file=fout)
+                    print(f'{enorm}', end=" " * 10, file=fout)
                 if self.compute_forces:
                     print("{:.10e}".format(fnorm), end=" " * 10, file=fout)
                 print(identifier, file=fout)
@@ -262,7 +263,7 @@ def _to_numpy(x, compute_argument):
     array.
     """
     if isinstance(compute_argument, Iterable):
-        return x[0].detach().numpy()
+        return x[0].detach().cpu().numpy() #added '.cpu()'
     else:
         return x
 
